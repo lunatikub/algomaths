@@ -100,7 +100,7 @@ func sdlInit() *sdl.Window {
 	return window
 }
 
-func sdlExit() {
+func sdlWait() {
 	running := true
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
@@ -197,7 +197,7 @@ func main() {
 		sdlWin := sdlInit()
 		defer sdlWin.Destroy()
 		monteCarloAnimated(sdlWin, nWin, opts.iteration)
-		sdlExit()
+		sdlWait()
 	} else {
 		fmt.Printf("%v\n", monteCarlo(opts.iteration))
 	}
