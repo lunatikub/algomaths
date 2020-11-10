@@ -49,7 +49,7 @@ func (S *SDL) Line(x1, y1, x2, y2 int, C color.RGBA) {
 }
 
 // Circle Draw a circle of center (x0, y0) and radius R
-func (S *SDL) Circle(x0, y0 int32, R int, C color.RGBA) {
+func (S *SDL) Circle(x0, y0 int, R int, C color.RGBA) {
 	err := float64(-R)
 	x := float64(R) - 0.5
 	y := 0.5
