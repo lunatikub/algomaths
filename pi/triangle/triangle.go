@@ -10,29 +10,25 @@ import (
 )
 
 const (
-	sz     = 1000
-	xo     = sz / 2 // x ogirin
-	yo     = sz / 2 // y origin
-	radius = 1.0
+	sz        = 1000
+	margin    = 10
+	thickness = 1
+	xo        = sz / 2 // x ogirin
+	yo        = sz / 2 // y origin
+	radius    = 1.0
 )
 
-// emulate a manual measure with a guide of the triangle base
+// emulate a manual measure with a ruler of the triangle base
 func measureBase(a, theta float64) float64 {
 	return 2 * a * math.Cos(common.Radian(theta))
-}
-
-// emulate a manual measure with a guide of the triangle height
-func measureHeight(a, theta float64) float64 {
-	return a * math.Sin(common.Radian(theta))
 }
 
 func trianglePIEstimation(triangles float64) float64 {
 	alpha := 360.0 / triangles
 	theta := (180.0 - alpha) / 2.0
 	base := measureBase(radius, theta)
-	height := measureHeight(radius, theta)
-	area := (base * height) / 2.0
-	return area * triangles
+	circumference := base * triangles
+	return circumference / (2 * radius)
 }
 
 type options struct {
@@ -50,12 +46,13 @@ func getOptions() *options {
 }
 
 func convert(x, y float64) (int, int) {
-	return int(x*float64(sz/2.0)) + xo, int(y*float64(sz/2)) + yo
+	return int(x*float64(sz/2.0)) + xo + margin,
+		int(y*float64(sz/2)) + yo + margin
 }
 
 func main() {
 	opts := getOptions()
-	S := common.SDLInit(sz, sz)
+	S := common.SDLInit(sz+2*margin, sz+2*margin)
 
 	delta := 360.0 / float64(opts.triangles)
 	angle := 0.0
@@ -66,14 +63,14 @@ func main() {
 	prevY := 0
 	once := true
 
-	S.Circle(xo, yo, sz/2, common.Red)
+	S.Circle(xo+margin, yo+margin, sz/2, common.Red, thickness)
 	for {
 		x, y = convert(math.Sin(common.Radian(angle)),
 			math.Cos(common.Radian(angle)))
-		S.Line(xo, yo, x, y, common.Green)
+		S.Line(xo, yo, x, y, common.Green, thickness)
 		angle += delta
 		if !once {
-			S.Line(prevX, prevY, x, y, common.Blue)
+			S.Line(prevX, prevY, x, y, common.Blue, thickness)
 		}
 		prevX, prevY = x, y
 		if angle > 360.0 {
@@ -84,7 +81,7 @@ func main() {
 			time.Duration(1000/opts.triangles))
 		once = false
 	}
-	S.Line(prevX, prevY, x, y, common.Blue)
+	S.Line(prevX, prevY, x, y, common.Blue, thickness)
 	S.Refresh()
 	fmt.Println(trianglePIEstimation(float64(opts.triangles)))
 	S.Wait()

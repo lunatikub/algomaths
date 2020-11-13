@@ -79,20 +79,37 @@ type neighbor struct {
 	x, y int
 }
 
-// SetBigPoint Set a big point at coordinates
-func (S *SDL) SetBigPoint(x, y int, C color.RGBA) {
-	var neighbors = []neighbor{
-		{0, 1}, {1, 1}, {1, 0}, {1, -1},
-		{0, -1}, {-1, -1}, {-1, 0}, {-1, 1},
-	}
-	S.sur.Set(x, y, C)
-	for _, n := range neighbors {
-		S.sur.Set(x+n.x, y+n.y, C)
+func (S *SDL) check(x, y int) bool {
+	return x >= 0 && y >= 0 && x <= int(S.w) && y <= int(S.h)
+}
+
+// Set set a point at coordiantes (x,y)
+// with color C and thickness T
+func (S *SDL) Set(x, y int, C color.RGBA, T int) {
+	switch T {
+	case 2:
+		var neighbors = []neighbor{
+			{0, 1}, {1, 1}, {1, 0}, {1, -1},
+			{0, -1}, {-1, -1}, {-1, 0}, {-1, 1},
+		}
+		if S.check(x, y) {
+			S.sur.Set(x, y, C)
+		}
+		for _, n := range neighbors {
+			if S.check(x+n.x, y+n.y) {
+				S.sur.Set(x+n.x, y+n.y, C)
+			}
+		}
+	case 1:
+		if S.check(x, y) {
+			S.sur.Set(x, y, C)
+		}
 	}
 }
 
 // Line Draw a line from (x1, y1) to (x2, y2)
-func (S *SDL) Line(x1, y1, x2, y2 int, C color.RGBA) {
+// with color C and thickness T
+func (S *SDL) Line(x1, y1, x2, y2 int, C color.RGBA, T int) {
 	var x, y float64
 	x = float64(x2 - x1)
 	y = float64(y2 - y1)
@@ -103,44 +120,54 @@ func (S *SDL) Line(x1, y1, x2, y2 int, C color.RGBA) {
 	y = float64(y1)
 	for i := 0; i < int(len); i++ {
 		if int32(x) < S.w && int32(y) < S.h {
-			S.sur.Set(int(x), int(y), C)
+			S.Set(int(x), int(y), C, T)
 		}
 		x += addx
 		y += addy
 	}
 }
 
-// Circle Draw a circle of center (x0, y0) and radius R
-func (S *SDL) Circle(x0, y0, R int, C color.RGBA) {
-	err := float64(-R)
-	x := float64(R) - 0.5
+func circleInit(R, x0, y0 float64) (float64, float64, float64, float64, float64) {
+	err := -R
+	x := R - 0.5
 	y := 0.5
-	cx := float64(x0) - 0.5
-	cy := float64(y0) - 0.5
+	cx := x0 - 0.5
+	cy := y0 - 0.5
+	return err, x, y, cx, cy
+}
 
+func correction(err, x, y float64) (float64, float64, float64) {
+	err += y
+	y++
+	err += y
+	if err >= 0 {
+		x--
+		err -= x
+		err -= x
+	}
+	return err, x, y
+}
+
+// Circle Draw a circle of center (x0, y0) and radius R
+// with color C and thickness T
+func (S *SDL) Circle(x0, y0, R int, C color.RGBA, T int) {
+	err, x, y, cx, cy := circleInit(float64(R), float64(x0), float64(y0))
 	for {
-		S.sur.Set(int(cx+x), int(cy+y), C)
-		S.sur.Set(int(cx+y), int(cy+x), C)
+		S.Set(int(cx+x), int(cy+y), C, T)
+		S.Set(int(cx+y), int(cy+x), C, T)
 		if x != 0 {
-			S.sur.Set(int(cx-x), int(cy+y), C)
-			S.sur.Set(int(cx+y), int(cy-x), C)
+			S.Set(int(cx-x), int(cy+y), C, T)
+			S.Set(int(cx+y), int(cy-x), C, T)
 		}
 		if y != 0 {
-			S.sur.Set(int(cx+x), int(cy-y), C)
-			S.sur.Set(int(cx-y), int(cy+x), C)
+			S.Set(int(cx+x), int(cy-y), C, T)
+			S.Set(int(cx-y), int(cy+x), C, T)
 		}
 		if x != 0 && y != 0 {
-			S.sur.Set(int(cx-x), int(cy-y), C)
-			S.sur.Set(int(cx-y), int(cy-x), C)
+			S.Set(int(cx-x), int(cy-y), C, T)
+			S.Set(int(cx-y), int(cy-x), C, T)
 		}
-		err += y
-		y++
-		err += y
-		if err >= 0 {
-			x--
-			err -= x
-			err -= x
-		}
+		err, x, y = correction(err, x, y)
 		if x < y {
 			break
 		}
@@ -148,34 +175,23 @@ func (S *SDL) Circle(x0, y0, R int, C color.RGBA) {
 }
 
 // Sector Draw a circle sector of center (x0, y0) and radius R
-func (S *SDL) Sector(x0, y0, R int, C color.RGBA) {
-	err := float64(-R)
-	x := float64(R) - 0.5
-	y := 0.5
-	cx := float64(x0) - 0.5
-	cy := float64(y0) - 0.5
-
+// with color C and thickness T
+func (S *SDL) Sector(x0, y0, R int, C color.RGBA, T int) {
+	err, x, y, cx, cy := circleInit(float64(R), float64(x0), float64(y0))
 	for {
 		if x != 0 {
 			if cx-x > float64(x0) {
-				S.sur.Set(int(cx-x), int(cy+y), C)
+				S.Set(int(cx-x), int(cy+y), C, T)
 			}
-			S.sur.Set(int(cx+y), int(cy-x), C)
+			S.Set(int(cx+y), int(cy-x), C, T)
 		}
 		if y != 0 {
-			S.sur.Set(int(cx+x), int(cy-y), C)
+			S.Set(int(cx+x), int(cy-y), C, T)
 			if cx-y > float64(x0) {
-				S.sur.Set(int(cx-y), int(cy+x), C)
+				S.Set(int(cx-y), int(cy+x), C, T)
 			}
 		}
-		err += y
-		y++
-		err += y
-		if err >= 0 {
-			x--
-			err -= x
-			err -= x
-		}
+		err, x, y = correction(err, x, y)
 		if x < y {
 			break
 		}
