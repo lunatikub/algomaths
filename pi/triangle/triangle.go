@@ -6,19 +6,24 @@ import (
 	"math"
 	"time"
 
-	c "github.com/lunatikub/lunamath/common"
+	common "github.com/lunatikub/lunamath/common"
 )
 
-var radius = 1.0
+const (
+	sz     = 1000
+	xo     = sz / 2 // x ogirin
+	yo     = sz / 2 // y origin
+	radius = 1.0
+)
 
 // emulate a manual measure with a guide of the triangle base
 func measureBase(a, theta float64) float64 {
-	return 2 * a * math.Cos(c.Radian(theta))
+	return 2 * a * math.Cos(common.Radian(theta))
 }
 
 // emulate a manual measure with a guide of the triangle height
 func measureHeight(a, theta float64) float64 {
-	return a * math.Sin(c.Radian(theta))
+	return a * math.Sin(common.Radian(theta))
 }
 
 func trianglePIEstimation(triangles float64) float64 {
@@ -34,22 +39,15 @@ type options struct {
 	triangles int
 }
 
-type point struct {
-	x, y float64
-}
-
 func getOptions() *options {
 	opts := new(options)
 	flag.IntVar(&opts.triangles, "triangle", 18, "number of triangles")
 	flag.Parse()
+	if opts.triangles < 3 {
+		panic("minimal number of triangles required: 3")
+	}
 	return opts
 }
-
-const (
-	sz = 1000
-	xo = sz / 2 // x ogirin
-	yo = sz / 2 // y origin
-)
 
 func convert(x, y float64) (int, int) {
 	return int(x*float64(sz/2.0)) + xo, int(y*float64(sz/2)) + yo
@@ -57,7 +55,7 @@ func convert(x, y float64) (int, int) {
 
 func main() {
 	opts := getOptions()
-	S := c.SDLInit(sz, sz)
+	S := common.SDLInit(sz, sz)
 
 	delta := 360.0 / float64(opts.triangles)
 	angle := 0.0
@@ -66,27 +64,27 @@ func main() {
 	y := 0
 	prevX := 0
 	prevY := 0
-	first := true
+	once := true
 
-	S.Circle(xo, yo, sz/2, c.Red)
+	S.Circle(xo, yo, sz/2, common.Red)
 	for {
-		x, y = convert(math.Sin(c.Radian(angle)),
-			math.Cos(c.Radian(angle)))
-		S.Line(xo, yo, x, y, c.Green)
+		x, y = convert(math.Sin(common.Radian(angle)),
+			math.Cos(common.Radian(angle)))
+		S.Line(xo, yo, x, y, common.Green)
 		angle += delta
-		if !first {
-			S.Line(prevX, prevY, x, y, c.Blue)
+		if !once {
+			S.Line(prevX, prevY, x, y, common.Blue)
 		}
 		prevX, prevY = x, y
-		if angle > 360 {
+		if angle > 360.0 {
 			break
 		}
 		S.Refresh()
-		wait := time.Duration(1000 / opts.triangles)
-		time.Sleep(time.Millisecond * wait)
-		first = false
+		time.Sleep(time.Millisecond *
+			time.Duration(1000/opts.triangles))
+		once = false
 	}
-	S.Line(prevX, prevY, x, y, c.Blue)
+	S.Line(prevX, prevY, x, y, common.Blue)
 	S.Refresh()
 	fmt.Println(trianglePIEstimation(float64(opts.triangles)))
 	S.Wait()

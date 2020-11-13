@@ -3,14 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/color"
-	"log"
 	"math"
 	"math/rand"
 	"time"
 
 	gc "github.com/gbin/goncurses"
-	"github.com/veandco/go-sdl2/sdl"
+	"github.com/lunatikub/lunamath/common"
 )
 
 const (
@@ -18,16 +16,9 @@ const (
 	margin = 10
 )
 
-var green = color.RGBA{0, 255, 0, 255}
-var red = color.RGBA{255, 0, 0, 255}
-
 type options struct {
 	iteration int
 	animated  bool
-}
-
-type point struct {
-	x, y float64
 }
 
 func getOptions() *options {
@@ -38,99 +29,11 @@ func getOptions() *options {
 	return opts
 }
 
-func point2SDL(p point) (x, y int) {
-	x = int(p.x * sz)
-	y = int(p.y * sz)
-	x = x + margin
-	y = sz - y + margin
-	return x, y
+func convert(x, y float64) (int, int) {
+	return int(x*sz) + margin, sz - int(y*sz) + margin
 }
 
-func line(surface *sdl.Surface, p1, p2 point, C color.RGBA) {
-	x1, y1 := point2SDL(p1)
-	x2, y2 := point2SDL(p2)
-
-	x := float64(x2 - x1)
-	y := float64(y2 - y1)
-	len := math.Sqrt(float64(x*x + y*y))
-	addx := x / len
-	addy := y / len
-
-	x = float64(x1)
-	y = float64(y1)
-	for i := 0; i < int(len); i++ {
-		surface.Set(int(x), int(y), C)
-		x += addx
-		y += addy
-	}
-}
-
-func setPoint(surface *sdl.Surface, x, y int, C color.RGBA) {
-	var neighbors = []point{
-		{0, 1}, {1, 1}, {1, 0}, {1, -1},
-		{0, -1}, {-1, -1}, {-1, 0}, {-1, 1},
-	}
-	surface.Set(x, y, C)
-	for _, n := range neighbors {
-		surface.Set(x+int(n.x), y+int(n.y), C)
-	}
-}
-
-func sdlInit() *sdl.Window {
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-		panic(err)
-	}
-	window, err := sdl.CreateWindow("montecarlo", 20, 20,
-		sz+2*margin, sz+2*margin, sdl.WINDOW_SHOWN)
-	if err != nil {
-		panic(err)
-	}
-	surface, err := window.GetSurface()
-	if err != nil {
-		panic(err)
-	}
-	surface.FillRect(nil, 0)
-
-	line(surface, point{0, 0}, point{0, 1}, green)
-	line(surface, point{0, 0}, point{1, 0}, green)
-	line(surface, point{0, 1}, point{1, 1}, red)
-	line(surface, point{1, 1}, point{1, 0}, red)
-	window.UpdateSurface()
-
-	return window
-}
-
-func sdlWait() {
-	running := true
-	for running {
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
-				println("Quit")
-				running = false
-				break
-			}
-		}
-	}
-	sdl.Quit()
-}
-
-func ncursesInit() *gc.Window {
-	win, err := gc.Init()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer gc.End()
-
-	gc.Echo(false)
-	gc.CBreak(true)
-	gc.Cursor(0)
-	win.Clear()
-
-	return win
-}
-
-func screenUpdate(win *gc.Window, r, n, e int) {
+func winUpdate(win *gc.Window, r, n, e int) {
 	pi := 4 * float64(r) / float64(n)
 	win.MovePrintf(2, 2, "PI estimation:    %-100v", pi)
 	win.MovePrintf(3, 2, "Precision:        %-100v", math.Abs(math.Pi-pi))
@@ -158,28 +61,32 @@ func monteCarlo(iteration int) float64 {
 	return 4 * float64(r) / float64(n)
 }
 
-func monteCarloAnimated(
-	sdlWin *sdl.Window,
-	nWin *gc.Window,
-	iteration int) float64 {
-	surface, err := sdlWin.GetSurface()
-	if err != nil {
-		panic(err)
-	}
+func decoration(S *common.SDL) {
+	x1, y1 := convert(0, 0)
+	x2, y2 := convert(0, 1)
+	x3, y3 := convert(1, 0)
+	x4, y4 := convert(1, 1)
+	S.Line(x1, y1, x2, y2, common.Green)
+	S.Line(x1, y1, x3, y3, common.Green)
+	S.Line(x2, y2, x4, y4, common.Red)
+	S.Line(x3, y3, x4, y4, common.Red)
+	S.Sector(x1, y1, sz, common.Green)
+}
+
+func monteCarloAnimated(S *common.SDL, W *gc.Window, iteration int) float64 {
 	r := 0
 	n := 0
 	for {
-		x := rand.Float64()
-		y := rand.Float64()
-		xSDL, ySDL := point2SDL(point{x, y})
+		x, y := rand.Float64(), rand.Float64()
+		xp, yp := convert(x, y)
 		if x*x+y*y <= 1 {
-			setPoint(surface, xSDL, ySDL, green)
+			S.SetBigPoint(xp, yp, common.Green)
 			r++
 		} else {
-			setPoint(surface, xSDL, ySDL, red)
+			S.SetBigPoint(xp, yp, common.Red)
 		}
-		sdlWin.UpdateSurface()
-		screenUpdate(nWin, r, n, iteration)
+		S.Refresh()
+		winUpdate(W, r, n, iteration)
 		n++
 		if n == iteration {
 			break
@@ -193,11 +100,11 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	if opts.animated {
-		nWin := ncursesInit()
-		sdlWin := sdlInit()
-		defer sdlWin.Destroy()
-		monteCarloAnimated(sdlWin, nWin, opts.iteration)
-		sdlWait()
+		nWin := common.NCInit()
+		S := common.SDLInit(sz+2*margin, sz+2*margin)
+		decoration(S)
+		monteCarloAnimated(S, nWin, opts.iteration)
+		S.Wait()
 	} else {
 		fmt.Printf("%v\n", monteCarlo(opts.iteration))
 	}
