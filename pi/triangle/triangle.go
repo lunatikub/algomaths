@@ -10,12 +10,11 @@ import (
 )
 
 const (
-	sz        = 1000
-	margin    = 10
-	thickness = 1
-	xo        = sz / 2 // x ogirin
-	yo        = sz / 2 // y origin
-	radius    = 1.0
+	sz     = 1000
+	margin = 10
+	xo     = sz / 2 // x ogirin
+	yo     = sz / 2 // y origin
+	radius = 1.0
 )
 
 // emulate a manual measure with a ruler of the triangle base
@@ -33,11 +32,13 @@ func trianglePIEstimation(triangles float64) float64 {
 
 type options struct {
 	triangles int
+	thickness int
 }
 
 func getOptions() *options {
 	opts := new(options)
 	flag.IntVar(&opts.triangles, "triangle", 18, "number of triangles")
+	flag.IntVar(&opts.thickness, "thickness", 2, "thickness")
 	flag.Parse()
 	if opts.triangles < 3 {
 		panic("minimal number of triangles required: 3")
@@ -63,14 +64,14 @@ func main() {
 	prevY := 0
 	once := true
 
-	S.Circle(xo+margin, yo+margin, sz/2, common.Red, thickness)
+	S.Circle(xo+margin, yo+margin, sz/2, common.Red, opts.thickness)
 	for {
 		x, y = convert(math.Sin(common.Radian(angle)),
 			math.Cos(common.Radian(angle)))
-		S.Line(xo, yo, x, y, common.Green, thickness)
+		S.Line(xo, yo, x, y, common.Green, opts.thickness)
 		angle += delta
 		if !once {
-			S.Line(prevX, prevY, x, y, common.Blue, thickness)
+			S.Line(prevX, prevY, x, y, common.Blue, opts.thickness)
 		}
 		prevX, prevY = x, y
 		if angle > 360.0 {
@@ -81,7 +82,7 @@ func main() {
 			time.Duration(1000/opts.triangles))
 		once = false
 	}
-	S.Line(prevX, prevY, x, y, common.Blue, thickness)
+	S.Line(prevX, prevY, x, y, common.Blue, opts.thickness)
 	S.Refresh()
 	fmt.Println(trianglePIEstimation(float64(opts.triangles)))
 	S.Wait()

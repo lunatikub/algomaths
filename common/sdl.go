@@ -70,6 +70,12 @@ func (S *SDL) Wait() {
 	sdl.Quit()
 }
 
+// Clean the surface
+func (S *SDL) Clean() {
+	rect := sdl.Rect{X: 0, Y: 0, W: S.w, H: S.h}
+	S.sur.FillRect(&rect, 0xffffffff)
+}
+
 // Refresh update surface
 func (S *SDL) Refresh() {
 	S.win.UpdateSurface()
