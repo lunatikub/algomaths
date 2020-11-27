@@ -1,0 +1,10 @@
+{
+    "table": {
+        "values": [ 2 ]
+    },
+    "modulo": {
+        "from": 10,
+        "to": 100,
+        "step": 0.1
+    }
+}

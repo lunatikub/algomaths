@@ -10,13 +10,13 @@ import (
 	"github.com/lunatikub/lunamath/common"
 )
 
+// constant using for the multiplication
 const (
 	sz     = 1000
 	margin = 10
-	x0     = sz / 2 // x ogirin
-	y0     = sz / 2 // y origin
-	radius = float64(sz / 2)
-	pi2    = math.Pi * 2
+	x0     = sz / 2          // x ogirin
+	y0     = sz / 2          // y origin
+	R      = float64(sz / 2) // radius
 )
 
 type options struct {
@@ -32,40 +32,48 @@ func getOptions() *options {
 	return opts
 }
 
-type fromTo struct {
+type v struct {
 	Values []float64 `json:"values"`
 	From   float64   `json:"from"`
 	To     float64   `json:"to"`
-	Inc    float64   `json:"inc"`
+	Step   float64   `json:"step"`
 }
 
 type input struct {
-	Table  fromTo `json:"table"`
-	Modulo fromTo `json:"modulo"`
+	Table  v `json:"table"`
+	Modulo v `json:"modulo"`
 }
 
-func get(n, m float64) (float64, float64) {
-	x := math.Sin((pi2/m)*n)*radius + x0 + margin
-	y := -math.Cos((pi2/m)*n)*radius + y0 + margin
+// Get the coordinates of the point depending on the angle
+func get(alpha, N float64) (float64, float64) {
+	x := math.Sin(N*alpha) * R
+	y := math.Cos(N*alpha) * R
 	return x, y
 }
 
-var once = true
+// Convert theorical coordinates to SDL coordinates
+func convert(x, y float64) (float64, float64) {
+	return x + x0 + margin, -y + y0 + margin
+}
 
-func multiplication(S *common.SDL, table, modulo float64, timeLapse int) {
+// Draw a line between 2 points
+func line(S *common.SDL, alpha, N, T, M float64) {
+	R := math.Mod(T*N, M)
+	x1, y1 := convert(get(alpha, N))
+	x2, y2 := convert(get(alpha, R))
+	S.Line(int(x1), int(y1), int(x2), int(y2), common.Black, 1)
+}
+
+// T: table
+// M: modulo
+func multiplication(S *common.SDL, T, M float64, timeLapse int) {
 	S.Clean()
-	for src := 1.0; src < modulo; src++ {
-		dst := math.Mod(table*src, modulo)
-		xSrc, ySrc := get(src, modulo)
-		xDst, yDst := get(dst, modulo)
-		S.Line(int(xSrc), int(ySrc), int(xDst), int(yDst), common.Black, 1)
+	alpha := (2 * math.Pi) / M
+	for N := 1.0; N < M; N++ {
+		line(S, alpha, N, T, M)
 	}
 	S.Circle(x0+margin, y0+margin, sz/2, common.Red, 2)
 	S.Refresh()
-	if once == true {
-		time.Sleep(2 * time.Second)
-		once = false
-	}
 	time.Sleep(time.Duration(timeLapse) * time.Millisecond)
 }
 
@@ -75,7 +83,7 @@ func foreachModulo(S *common.SDL, I input, t float64, timelapse int) {
 			multiplication(S, t, m, timelapse)
 		}
 	} else {
-		for m := I.Modulo.From; m <= I.Modulo.To; m += I.Modulo.Inc {
+		for m := I.Modulo.From; m <= I.Modulo.To; m += I.Modulo.Step {
 			multiplication(S, t, m, timelapse)
 		}
 	}
@@ -87,7 +95,7 @@ func foreachTable(S *common.SDL, I input, timelapse int) {
 			foreachModulo(S, I, t, timelapse)
 		}
 	} else {
-		for t := I.Table.From; t <= I.Table.To; t += I.Table.Inc {
+		for t := I.Table.From; t <= I.Table.To; t += I.Table.Step {
 			foreachModulo(S, I, t, timelapse)
 		}
 	}
