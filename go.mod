@@ -1,4 +1,4 @@
-module github.com/lunatikub/lunamath
+module github.com/lunatikub/AlgoMathAndCo
 
 go 1.13
 

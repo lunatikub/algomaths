@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/lunatikub/lunamath/common"
+	common "github.com/lunatikub/AlgoMathAndCo/common"
 )
 
 // constant using for the multiplication

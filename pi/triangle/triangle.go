@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	common "github.com/lunatikub/lunamath/common"
+	common "github.com/lunatikub/AlgoMathAndCo/common"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/lunatikub/lunamath/common"
+	common "github.com/lunatikub/AlgoMathAndCo/common"
 )
 
 type options struct {
